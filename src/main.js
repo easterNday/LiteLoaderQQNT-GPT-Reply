@@ -1,27 +1,32 @@
+/**
+ * 初始化模块，依赖于Electron和OpenAI库。
+ * 该模块负责管理插件的配置，创建OpenAI实例，并处理与渲染进程的通信。
+ */
+
 const fs = require("fs");
 const path = require("path");
 const { BrowserWindow, ipcMain, shell } = require("electron");
-const OpenAI = require("openai");
 
-let openai = null;
-
+// 定义插件数据路径和设置文件路径
 const pluginDataPath = LiteLoader.plugins["gpt_reply"].path.data;
 const settingsPath = path.join(pluginDataPath, "settings.json");
 
+// 定义默认设置
 const defaultSettings = {
-    openai_api_key: "",
-    openai_base_url: "",
-    model: "gpt-3.5-turbo",
+    api_key: "sk-9ab59e3267b54af0a4a4fa6d0f7bf94e",
+    base_url: "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+    model: "qwen-turbo",
     reply_mode: "reply-mode-copy",
     system_message:
         "你在回复群聊消息，请使用以下说话风格\n- 你说话言简意赅\n- 你喜欢用颜文字卖萌",
 };
 
+// 确保插件数据目录存在
 if (!fs.existsSync(pluginDataPath)) {
     fs.mkdirSync(pluginDataPath, { recursive: true });
 }
 
-
+// 初始化或更新设置文件
 if (!fs.existsSync(settingsPath)) {
     fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 4));
 } else {
@@ -31,9 +36,10 @@ if (!fs.existsSync(settingsPath)) {
     }
 }
 
+// 加载当前设置
 const currentSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-const apiKey = currentSettings.openai_api_key || process.env.OPENAI_API_KEY;
-const baseURL = currentSettings.openai_base_url || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+const apiKey = currentSettings.api_key || process.env.API_KEY;
+const baseURL = currentSettings.base_url || process.env.BASE_URL || 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
 
 try {
     openai = new OpenAI({
@@ -92,6 +98,7 @@ function watchSettingsChange(webContents, settingsPath) {
     );
 }
 
+// 处理设置更改的IPC消息
 ipcMain.on(
     "LiteLoader.gpt_reply.watchSettingsChange",
     (event, settingsPath) => {
@@ -99,10 +106,6 @@ ipcMain.on(
         watchSettingsChange(window.webContents, settingsPath);
     }
 );
-
-ipcMain.handle("LiteLoader.gpt_reply.checkOpenAI", (event, message) => {
-    return openai ? true : false;
-});
 
 /**
  * 获取插件的配置信息
@@ -127,12 +130,6 @@ ipcMain.handle("LiteLoader.gpt_reply.setSettings", (event, content) => {
     try {
         const new_config = JSON.stringify(content, null, 4);
         fs.writeFileSync(settingsPath, new_config, "utf-8");
-        const apiKey = content.openai_api_key || process.env.OPENAI_API_KEY;
-        const baseURL = content.openai_base_url || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-        openai = new OpenAI({
-            apiKey: apiKey,
-            baseURL: baseURL,
-        });
     } catch (error) {
         log(error);
     }
@@ -162,16 +159,42 @@ ipcMain.handle("LiteLoader.gpt_reply.logToMain", (event, ...args) => {
 ipcMain.handle("LiteLoader.gpt_reply.getGPTReply", async (event, params) => {
     try {
         const { system_message, prompt, model } = params;
-        const completion = await openai.chat.completions.create({
-            messages: [
-                { role: "system", content: system_message },
-                { role: "user", content: prompt },
-            ],
+
+        const data = {
             model: model,
+            input: {
+                messages: [
+                    {
+                        role: 'system',
+                        content: system_message,
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+            },
+            parameters: {},
+        };
+
+        console.log("大王叫我来寻山");
+        const response = await fetch(baseURL, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
         });
 
-        const response = completion.choices[0].message.content;
-        return response;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log(responseData);
+        console.log(responseData.output.text);
+        return responseData.output.text;
     } catch (error) {
         log(error);
         return {};
@@ -182,33 +205,33 @@ ipcMain.handle("LiteLoader.gpt_reply.getGPTReply", async (event, params) => {
  * 流式获取GPT回复
  * @param {Object} params - 包含system_message, prompt, model的参数对象
  */
-ipcMain.handle("LiteLoader.gpt_reply.streamGPTReply", async (event, params) => {
-    try {
-        const { system_message, prompt, model } = params;
-        const completion = await openai.chat.completions.create({
-            messages: [
-                { role: "system", content: system_message },
-                { role: "user", content: prompt },
-            ],
-            model: model,
-            stream: true,
-        });
+// ipcMain.handle("LiteLoader.gpt_reply.streamGPTReply", async (event, params) => {
+//     try {
+//         const { system_message, prompt, model } = params;
+//         const completion = await openai.chat.completions.create({
+//             messages: [
+//                 { role: "system", content: system_message },
+//                 { role: "user", content: prompt },
+//             ],
+//             model: model,
+//             stream: true,
+//         });
 
-        let chunkIdx = 0;
-        for await (const chunk of completion) {
-            const chunkContent = chunk.choices[0].delta?.content || "";
-            event.sender.send(
-                "LiteLoader.gpt_reply.streamData",
-                chunkContent,
-                chunkIdx
-            );
-            chunkIdx++;
-        }
-    } catch (error) {
-        log(error);
-        event.sender.send("LiteLoader.gpt_reply.streamError", error.message);
-    }
-});
+//         let chunkIdx = 0;
+//         for await (const chunk of completion) {
+//             const chunkContent = chunk.choices[0].delta?.content || "";
+//             event.sender.send(
+//                 "LiteLoader.gpt_reply.streamData",
+//                 chunkContent,
+//                 chunkIdx
+//             );
+//             chunkIdx++;
+//         }
+//     } catch (error) {
+//         log(error);
+//         event.sender.send("LiteLoader.gpt_reply.streamError", error.message);
+//     }
+// });
 
 /**
  * 创建窗口时的触发事件

@@ -29,11 +29,6 @@ contextBridge.exposeInMainWorld("gpt_reply", {
     openWeb: (url) => ipcRenderer.send("LiteLoader.gpt_reply.openWeb", url),
 
     /**
-     * 检查OpenAI是否可用
-     */
-    checkOpenAI: () => ipcRenderer.invoke("LiteLoader.gpt_reply.checkOpenAI"),
-
-    /**
      * 获取GPT回复
      * @param {Object} params - 包含system_message, prompt, model的参数对象
      * @returns {Promise<string>} GPT回复内容
@@ -46,45 +41,45 @@ contextBridge.exposeInMainWorld("gpt_reply", {
      * @param {Object} params - 包含system_message, prompt, model的参数对象
      * @param {string} streamElementId - 显示流式数据的HTML元素ID
      */
-    streamGPTReply: (params, streamElementId) => {
-        ipcRenderer.invoke("LiteLoader.gpt_reply.streamGPTReply", params);
+    // streamGPTReply: (params, streamElementId) => {
+    //     ipcRenderer.invoke("LiteLoader.gpt_reply.streamGPTReply", params);
 
-        // 移除之前的监听器以避免重复事件
-        ipcRenderer.removeAllListeners("LiteLoader.gpt_reply.streamData");
-        ipcRenderer.removeAllListeners("LiteLoader.gpt_reply.streamError");
+    //     // 移除之前的监听器以避免重复事件
+    //     ipcRenderer.removeAllListeners("LiteLoader.gpt_reply.streamData");
+    //     ipcRenderer.removeAllListeners("LiteLoader.gpt_reply.streamError");
 
-        /**
-         * 处理流数据
-         * @param {Event} event - 事件对象
-         * @param {string} chunkContent - 流数据内容
-         * @param {number} chunkIdx - 数据块索引
-         */
-        ipcRenderer.on(
-            "LiteLoader.gpt_reply.streamData",
-            (event, chunkContent, chunkIdx) => {
-                const streamElement = document.getElementById(streamElementId);
-                if (streamElement) {
-                    if (chunkIdx === 0) {
-                        streamElement.innerText = "";
-                    }
-                    streamElement.innerText += chunkContent;
-                }
-            }
-        );
+    //     /**
+    //      * 处理流数据
+    //      * @param {Event} event - 事件对象
+    //      * @param {string} chunkContent - 流数据内容
+    //      * @param {number} chunkIdx - 数据块索引
+    //      */
+    //     ipcRenderer.on(
+    //         "LiteLoader.gpt_reply.streamData",
+    //         (event, chunkContent, chunkIdx) => {
+    //             const streamElement = document.getElementById(streamElementId);
+    //             if (streamElement) {
+    //                 if (chunkIdx === 0) {
+    //                     streamElement.innerText = "";
+    //                 }
+    //                 streamElement.innerText += chunkContent;
+    //             }
+    //         }
+    //     );
 
-        /**
-         * 处理流错误
-         * @param {Event} event - 事件对象
-         * @param {string} errorMessage - 错误信息
-         */
-        ipcRenderer.on(
-            "LiteLoader.gpt_reply.streamError",
-            (event, errorMessage) => {
-                const streamElement = document.getElementById(streamElementId);
-                if (streamElement) {
-                    streamElement.innerText += `\nError: ${errorMessage}`;
-                }
-            }
-        );
-    },
+    //     /**
+    //      * 处理流错误
+    //      * @param {Event} event - 事件对象
+    //      * @param {string} errorMessage - 错误信息
+    //      */
+    //     ipcRenderer.on(
+    //         "LiteLoader.gpt_reply.streamError",
+    //         (event, errorMessage) => {
+    //             const streamElement = document.getElementById(streamElementId);
+    //             if (streamElement) {
+    //                 streamElement.innerText += `\nError: ${errorMessage}`;
+    //             }
+    //         }
+    //     );
+    // },
 });

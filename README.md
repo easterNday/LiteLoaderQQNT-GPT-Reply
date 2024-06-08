@@ -1,5 +1,18 @@
 # LiteLoaderQQNT-GPT-Reply
 
+```
+curl --location 'https://dashscope.aliyuncs.com/api/v1/apps/3ebf96cd850e4fa08e8db7f5fd076fbd/completion' \
+--header 'Authorization: Bearer {YOUR_API_KEY}' \
+--header 'Content-Type: application/json' \
+--data '{
+    "input": {
+        "prompt": "如何做土豆炖猪脚?"
+    },
+    "parameters":  {},
+    "debug": {}
+}' --verbose
+```
+
 简体中文 | [English](./README.en.md)
 
 [LiteLoaderQQNT](https://github.com/LiteLoaderQQNT/LiteLoaderQQNT) 插件，直接在 QQNT 使用 ChatGPT 回复消息

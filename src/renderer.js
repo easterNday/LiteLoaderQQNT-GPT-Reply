@@ -74,15 +74,15 @@ async function getGPTResponse(prompt, callback) {
  * @param {string} prompt - 用户输入的提示
  * @param {string} streamElementId - 显示流式数据的HTML元素ID
  */
-async function streamGPTResponse(prompt, streamElementId) {
-    const settings = await gpt_reply.getSettings();
-    const params = {
-        system_message: settings.system_message,
-        prompt: prompt,
-        model: settings.model,
-    };
-    window.gpt_reply.streamGPTReply(params, streamElementId);
-}
+// async function streamGPTResponse(prompt, streamElementId) {
+//     const settings = await gpt_reply.getSettings();
+//     const params = {
+//         system_message: settings.system_message,
+//         prompt: prompt,
+//         model: settings.model,
+//     };
+//     window.gpt_reply.streamGPTReply(params, streamElementId);
+// }
 
 /**
  * 创建工具栏图标
@@ -228,19 +228,19 @@ async function initializeResponseArea() {
     //         console.log("发送");
     //         const editor = document.querySelector(".ck-content");
     //         editor.innerHTML = gptResponseText.innerText.split('\n').map(line => `<p>${line}</p>`).join('');
-    
+
     //         document.querySelector(".send-msg").click();
     //     }
-    
+
     //     hideGPTResponse();
     // });
 
     actionButton.addEventListener("click", () => {
         navigator.clipboard.writeText(gptResponseText.innerText);
-    
+
         hideGPTResponse();
     });
-    
+
 
     document
         .querySelector("#gpt-reply-cancel-button")
@@ -307,13 +307,10 @@ async function showGPTResponse(text) {
             "请在聊天框中输入内容";
         return;
     }
-    const openaiIsAvaliable = await gpt_reply.checkOpenAI();
-    if (!openaiIsAvaliable) {
-        document.getElementById("response-text").innerText =
-            "未设置 OpenAI API Key";
-        return;
-    }
-    streamGPTResponse(text, "response-text");
+    // streamGPTResponse(text, "response-text");
+    getGPTResponse(text, (e) => {
+        document.getElementById("response-text").innerText = e.data
+    })
 }
 
 /**
@@ -350,8 +347,8 @@ export const onSettingWindowCreated = async (view) => {
         view.innerHTML = await (await fetch(html_file_path)).text();
         const settings = await gpt_reply.getSettings();
 
-        const openai_api_key = view.querySelector("#openai-api-key");
-        const openai_base_url = view.querySelector("#openai-base-url");
+        const api_key = view.querySelector("#api-key");
+        const base_url = view.querySelector("#base-url");
         const chat_model = view.querySelectorAll('input[name="chat-model"]');
         const custom_chat_model = view.querySelector("#custom-chat-model");
         const system_message = view.querySelector("#system-message");
@@ -380,8 +377,8 @@ export const onSettingWindowCreated = async (view) => {
         //     gpt_reply.setSettings(settings);
         // });
 
-        openai_api_key.value = settings.openai_api_key;
-        openai_base_url.value = settings.openai_base_url;
+        api_key.value = settings.api_key;
+        base_url.value = settings.base_url;
         system_message.value = settings.system_message;
 
         if (
@@ -427,13 +424,13 @@ export const onSettingWindowCreated = async (view) => {
             }
         });
 
-        openai_api_key.addEventListener("input", async () => {
-            settings.openai_api_key = openai_api_key.value;
+        api_key.addEventListener("input", async () => {
+            settings.api_key = api_key.value;
             await gpt_reply.setSettings(settings);
         });
 
-        openai_base_url.addEventListener("input", async () => {
-            settings.openai_base_url = openai_base_url.value;
+        base_url.addEventListener("input", async () => {
+            settings.base_url = base_url.value;
             await gpt_reply.setSettings(settings);
         });
 
